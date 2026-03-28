@@ -43,13 +43,9 @@ Item {
     // =========================================================================
 
     function openUI() {
-        // Préserve les champs de saisie entre ouvertures du dialogue
-        statusText.text  = ""
-        statusText.color = "black"
-        infoText.text    = ""
-        if (pluginState === "") pluginState = "config"
-        downloadDialog.open()
-    }
+    pluginState = "config"
+    downloadDialog.open()
+}
 
     // =========================================================================
     // 2. ÉTAT INTERNE
@@ -76,7 +72,7 @@ Item {
 
 
     property var pluginsByAuthor: ({
-        "woupss":        ["qfield-pluginbox", "qfield-filter-plugin", "qfield-DriveMe", "qfield-plugin-update", "qfield-github-downloader", "qfield-theme-position-color"],
+        "woupss":        ["qfield-pluginbox", "qfield-filter-plugin", "qfield-DriveMe", "qfield-plugin-update", "Github-Downloader", "qfield-theme-position-color"],
         "gacarrillor": 
 ["qfield-plugin-reloader"],
         "HeatherHillers":["qfield_vegetation_monitoring"],
@@ -93,7 +89,7 @@ Item {
        "mbernasocchi": 
 ["qfield-layer-loader", "qfield-ask-ai"],
      "opengisch": 
-["qfield-geometryless-addition"]
+["qfield-geometryless-addition", "qfield-webdav-scheduler"]
     })
 
     // =========================================================================
@@ -1109,6 +1105,41 @@ Item {
 
         standardButtons: Dialog.NoButton
 
+    onClosed: {
+    // ── État interne ──────────────────────────────
+    pluginState    = ""
+    destMode       = "project"
+    fileTree       = []
+    repoFolders    = []
+    downloadQueue  = []
+    baseDestPath   = ""
+
+    // ── Champs de saisie ──────────────────────────
+    ownerCombo.editText    = ""
+    ownerCombo.currentIndex = -1
+    repoCombo.model        = []
+    repoCombo.currentIndex = -1
+    repoTextInput.text     = ""
+    repoInput.text         = ""
+    branchInput.text       = "main"
+    folderInput.text       = ""
+
+    // ── Token ─────────────────────────────────────
+    useTokenCheckbox.checked = false
+    tokenInput.text          = ""
+
+    // ── UI liste / statut ─────────────────────────
+    fileListModel.clear()
+    selectAllChk.checked  = false
+    radioAll.checked      = true
+    statusText.text       = ""
+    statusText.color      = "black"
+    infoText.text         = ""
+
+    // ── Scroll remis en haut ─────────────────────
+    mainFlickable.contentY = 0
+}
+
         // Padding Dialog à 0 — les marges 10 px gauche/droite sont gérées
         // directement par mainCol (x:10, width: parent.width - 20)
         topPadding:    0
@@ -1157,7 +1188,7 @@ Item {
                 Label {
                     text:   tr("TITLE")
                     font.bold:        true
-                    font.pointSize:   13
+                    font.pointSize:   18
                     color:            Theme.mainColor
                     Layout.alignment: Qt.AlignHCenter
                     Layout.topMargin: 0
@@ -1278,46 +1309,124 @@ Item {
                     spacing: 8
 //================ZONE DE SAISIE OWNER==========
                     ColumnLayout {
-                        Layout.fillWidth: true
-                        Layout.alignment: Qt.AlignTop   // aligne les deux colonnes par le haut
-                        spacing: 1
-                        Text { text: tr("LBL_OWNER"); Layout.bottomMargin: 10; color: "#666"; font.pixelSize: 11 }
+    Layout.fillWidth: true
+    Layout.alignment: Qt.AlignTop
+    spacing: 1
+    Text { text: tr("LBL_OWNER"); Layout.bottomMargin: 10; color: "#666"; font.pixelSize: 11 }
 
-                        // Auteur : ComboBox éditable avec placeholder — même style que repoCombo
-                        ComboBox {
-                            id: ownerCombo
-                            editable: true
-                            currentIndex: -1          // démarre vide → affiche le placeholder
-                            model: pluginAuthors
-                            Layout.fillWidth: true
-                            Layout.bottomMargin: 5
-// Même hauteur que MarqueeTextField pour aligner les deux colonnes
-                            Layout.preferredHeight: Math.max(40, implicitContentHeight + topPadding + bottomPadding + 14)
-                            enabled: pluginState !== "exploring" && pluginState !== "downloading"
-                            Component.onCompleted: {
-                                // Injecter le placeholder dans le TextField interne
-                                contentItem.placeholderText = tr("PH_OWNER")
-                            }
-                            // onActivated : sélection depuis la liste déroulante
-                            onActivated: {
-                                if (destMode === "plugin") {
-                                    var repos = pluginsByAuthor[currentText.trim()]
-                                    repoCombo.model = repos ? repos : []
-                                    repoCombo.currentIndex = (repos && repos.length > 0) ? 0 : -1
-                                    if (repos && repos.length > 0) folderInput.text = repos[0]
-                                }
-                            }
-                            // onEditTextChanged : saisie libre
-                            onEditTextChanged: {
-                                if (destMode === "plugin") {
-                                    var repos2 = pluginsByAuthor[editText.trim()]
-                                    repoCombo.model = repos2 ? repos2 : []
-                                    repoCombo.currentIndex = (repos2 && repos2.length > 0) ? 0 : -1
-                                    if (repos2 && repos2.length > 0) folderInput.text = repos2[0]
-                                }
-                            }
-                        }
-                    }
+    ComboBox {
+        id: ownerCombo
+        editable: true
+        currentIndex: -1
+        model: pluginAuthors
+        Layout.fillWidth: false          // ← réduit la largeur
+        Layout.preferredWidth: 170       // ← largeur fixe (ajuster selon besoin)
+        Layout.bottomMargin: 5
+        Layout.preferredHeight: Math.max(40, implicitContentHeight + topPadding + bottomPadding + 8)
+        enabled: pluginState !== "exploring" && pluginState !== "downloading"
+
+        // ── Logique métier inchangée ──────────────────────────────────────
+        onActivated: {
+            if (destMode === "plugin") {
+                var repos = pluginsByAuthor[currentText.trim()]
+                repoCombo.model = repos ? repos : []
+                repoCombo.currentIndex = (repos && repos.length > 0) ? 0 : -1
+                if (repos && repos.length > 0) folderInput.text = repos[0]
+            }
+        }
+        onEditTextChanged: {
+            if (destMode === "plugin") {
+                var repos2 = pluginsByAuthor[editText.trim()]
+                repoCombo.model = repos2 ? repos2 : []
+                repoCombo.currentIndex = (repos2 && repos2.length > 0) ? 0 : -1
+                if (repos2 && repos2.length > 0) folderInput.text = repos2[0]
+            }
+        }
+
+        // ── ContentItem personnalisé : marquee + saisie ───────────────────
+        contentItem: Item {
+    implicitHeight: 26
+
+    Item {
+        id:     ownerClip
+        clip:   true
+        anchors.left:           parent.left
+        anchors.right:          parent.right
+        anchors.verticalCenter: parent.verticalCenter
+        anchors.leftMargin:     8
+        anchors.rightMargin:    2
+        height: ownerMarqueeText.height
+
+        Text {
+            id:             ownerMarqueeText
+            x:              0
+            // ✅ Masqué pendant la saisie — TextInput prend le relais
+            visible:        !ownerTextInput.activeFocus
+            text:           ownerCombo.editText !== ""
+                            ? ownerCombo.editText
+                            : tr("PH_OWNER")
+            font.pixelSize: 13
+            color:          ownerCombo.editText !== ""
+                            ? (ownerCombo.enabled ? "#222" : "#aaa")
+                            : "#aaa"
+            verticalAlignment: Text.AlignVCenter
+            width: implicitWidth
+
+            property bool needsScroll:    implicitWidth > ownerClip.width
+            property int  travelDistance: Math.max(0, implicitWidth - ownerClip.width)
+
+            SequentialAnimation on x {
+                running:  ownerMarqueeText.needsScroll
+                          && ownerCombo.visible
+                          && !ownerTextInput.activeFocus  // ✅ stoppe pendant saisie
+                loops:    Animation.Infinite
+                PauseAnimation  { duration: 2000 }
+                NumberAnimation {
+                    to:       -ownerMarqueeText.travelDistance
+                    duration: ownerMarqueeText.travelDistance > 0
+                              ? ownerMarqueeText.travelDistance * 20 : 0
+                    easing.type: Easing.Linear
+                }
+                PauseAnimation  { duration: 1000 }
+                NumberAnimation {
+                    to:       0
+                    duration: ownerMarqueeText.travelDistance > 0
+                              ? ownerMarqueeText.travelDistance * 20 : 0
+                    easing.type: Easing.Linear
+                }
+            }
+            onTextChanged: { x = 0 }
+        }
+    }
+
+    TextInput {
+        id:                  ownerTextInput   // ✅ id pour que marquee puisse le référencer
+        anchors.fill:        parent
+        anchors.leftMargin:  8
+        anchors.rightMargin: 2
+        // ✅ Couleur normale quand focus, transparent sinon (marquee prend le relais)
+        color:               activeFocus ? "#222" : "transparent"
+        verticalAlignment:   TextInput.AlignVCenter
+        text:                ownerCombo.editText
+        font.pixelSize:      13
+        enabled:             ownerCombo.editable && ownerCombo.enabled
+        selectByMouse:       true
+        onTextChanged:       ownerCombo.editText = text
+        onActiveFocusChanged: {
+            if (activeFocus) {
+                ownerMarqueeText.x = 0
+                cursorPosition = text.length
+            }
+        }
+        cursorDelegate: Rectangle {
+            width:   2
+            color:   "#222"
+            visible: parent.cursorVisible
+        }
+    }
+  }
+}
+}
 //==============ZONE DE SAISIE REPO==============
                     ColumnLayout {
                         Layout.fillWidth: true
@@ -1343,24 +1452,108 @@ Item {
 
                         // Mode plugin : liste déroulante repos filtrée par auteur + saisie libre
                         ComboBox {
-                            id: repoCombo
-                            visible: destMode === "plugin"
-                            
-                            editable: true
-                            model: []
-                            displayText: editText
-                            Layout.fillWidth: true
-                            Layout.topMargin: 10
+                         id: repoCombo
+                         visible: destMode === "plugin"
+                         editable: true
+                         model: []
+                         displayText: editText
+                         Layout.preferredWidth: 170   // ajuster selon besoin
+                         Layout.fillWidth: false
+                         Layout.topMargin: 10
+                         Layout.preferredHeight: Math.max(40, implicitContentHeight + topPadding + bottomPadding + 14)
+                         enabled: pluginState !== "exploring" && pluginState !== "downloading"
+    onEditTextChanged: {
+        if (destMode === "plugin") folderInput.text = editText.trim()
+    }
 
-// Même hauteur que MarqueeTextField pour aligner les deux colonnes
-                            Layout.preferredHeight: Math.max(40, implicitContentHeight + topPadding + bottomPadding + 14)
-                            enabled: pluginState !== "exploring" && pluginState !== "downloading"
-                            onEditTextChanged: {
-                                // Nom dossier = nom du repo automatiquement
-                                if (destMode === "plugin") folderInput.text = editText.trim()
-                            }
-                        }
-                    }
+        onActivated: {
+    repoTextInput.text = repoCombo.editText
+    repoTextInput.cursorPosition = repoTextInput.text.length
+}
+
+    // ── ContentItem personnalisé : TextField avec marquee sur le texte affiché ──
+    contentItem: Item {
+    implicitHeight: 26
+
+    Item {
+        id:     repoClip
+        clip:   true
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.verticalCenter: parent.verticalCenter
+        anchors.leftMargin:     8
+        anchors.rightMargin:    2
+        height: repoMarqueeText.height
+
+        Text {
+            id: repoMarqueeText
+            x:              0
+            // ✅ Masqué pendant la saisie — TextInput prend le relais
+            visible: !repoTextInput.activeFocus
+            text: repoCombo.editText !== ""
+    ? repoCombo.editText : tr("PH_REPO")
+            font.pixelSize: 13
+            color: repoCombo.editText !== "" ? (repoCombo.enabled ? "#222" : "#aaa") : "#aaa"
+            verticalAlignment: Text.AlignVCenter
+            width: implicitWidth
+
+            property bool needsScroll:    implicitWidth > repoClip.width
+property int  travelDistance: Math.max(0, implicitWidth - repoClip.width)
+
+            SequentialAnimation on x {
+                running:  repoMarqueeText.needsScroll
+                          && repoCombo.visible
+                          && !repoTextInput.activeFocus  // ✅ stoppe pendant saisie
+                loops:    Animation.Infinite
+                PauseAnimation  { duration: 2000 }
+                NumberAnimation {
+                    to:       -repoMarqueeText.travelDistance
+                    duration: repoMarqueeText.travelDistance > 0
+                              ? repoMarqueeText.travelDistance * 20 : 0
+                    easing.type: Easing.Linear
+                }
+                PauseAnimation  { duration: 1000 }
+                NumberAnimation {
+                    to:       0
+                    duration: repoMarqueeText.travelDistance > 0
+                              ? repoMarqueeText.travelDistance * 20 : 0
+                    easing.type: Easing.Linear
+                }
+            }
+            onTextChanged: { x = 0 }
+        }
+    }
+
+    TextInput {
+    id: repoTextInput
+    anchors.fill: parent
+    anchors.leftMargin:  8
+    anchors.rightMargin: 2
+    color: activeFocus ? "#222" : "transparent"
+    verticalAlignment: TextInput.AlignVCenter
+    font.pixelSize: 13
+    enabled: repoCombo.editable && repoCombo.enabled  
+    selectByMouse: true
+
+    Component.onCompleted: text = repoCombo.editText              // ← init sans binding live
+
+    onTextChanged: repoCombo.editText = text
+
+    onActiveFocusChanged: {
+        if (activeFocus) {
+            repoMarqueeText.x = 0
+            cursorPosition = text.length
+        }
+    }
+    cursorDelegate: Rectangle {
+        width:   2
+        color:   "#222"
+        visible: parent.cursorVisible
+    }
+}
+  }
+}
+}
                 }
 
                 // ── BRANCHE + DOSSIER LOCAL ─────────────────────────────
