@@ -1,0 +1,7 @@
+[general]
+name=Github Downloader
+description= Store your project on github and download it or download your plugins.
+author=woups
+icon=icon.svg
+version=0.1
+homepage=https://github.com/
