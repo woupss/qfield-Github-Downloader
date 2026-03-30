@@ -2,7 +2,6 @@ Store your project on github and download it or download your plugins or any plu
 
 it will clone all your repo or if you want you can choose wich files/folders to download.
 
-![Screenshot_2026-03-30-16-09-39-685_ch opengis qfield](https://github.com/user-attachments/assets/44409270-eb84-4af6-9ed4-18530f3e334b)
 ![Screenshot_2026-03-30-16-11-53-081_ch opengis qfield-edit](https://github.com/user-attachments/assets/f01a0c43-1af1-40ad-b8b1-f54fbdfb6a1b)
 ![Screenshot_2026-03-30-16-12-41-064_ch opengis qfield](https://github.com/user-attachments/assets/2251e83a-60c3-4f6f-a63e-9ae241e83474)
 ![Screenshot_2026-03-30-16-12-45-649_ch opengis qfield](https://github.com/user-attachments/assets/5b82df7c-3dbd-4b95-a3b5-e5e8d9738f34)
