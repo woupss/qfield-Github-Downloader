@@ -2,11 +2,11 @@ Store your project on github and download it or download your plugins or any plu
 
 it will clone all your repo or if you want you can choose wich files/folders to download.
 
-![Screenshot_2026-03-28-11-24-40-211_ch opengis qfield-edit](https://github.com/user-attachments/assets/ad21108e-f9d8-4710-b32f-e8ccffa5309c)
-![Screenshot_2026-03-30-14-26-43-814_ch opengis qfield](https://github.com/user-attachments/assets/d06d6023-052d-4bfc-b0fd-383e31677fe9)
-![Screenshot_2026-03-30-16-12-41-064_ch opengis qfield](https://github.com/user-attachments/assets/9868f79d-5750-4df9-b1ba-fb545f19ce5d)
-![Screenshot_2026-03-30-16-12-45-649_ch opengis qfield](https://github.com/user-attachments/assets/83a0277b-4abf-40c0-8d51-861827245301)
-![Screenshot_2026-03-30-16-12-51-260_ch opengis qfield](https://github.com/user-attachments/assets/ac41a9ba-5388-4753-b77d-0253e90516b1)
-![Screenshot_2026-03-30-16-13-21-953_ch opengis qfield](https://github.com/user-attachments/assets/64b0d7ea-5ac0-4f82-9f5f-ea2224357430)
-![Screenshot_2026-03-30-16-13-33-873_ch opengis qfield](https://github.com/user-attachments/assets/46dc7507-fd70-4475-87bd-ed1524d5bd65)
-![Screenshot_2026-03-30-16-24-12-360_ch opengis qfield](https://github.com/user-attachments/assets/1f2af738-8dc6-49a6-a9af-60ec9ebf4686)
+![Screenshot_2026-03-30-16-09-39-685_ch opengis qfield](https://github.com/user-attachments/assets/67a72832-a18f-4c69-9cb0-0208f68dfe3b)
+![Screenshot_2026-03-30-16-11-53-081_ch opengis qfield-edit](https://github.com/user-attachments/assets/fecb53b5-0a3c-4960-842d-f794e491cf3a)
+![Screenshot_2026-03-30-16-12-41-064_ch opengis qfield](https://github.com/user-attachments/assets/957027e5-2c81-4f87-b6b4-b07cf7054cab)
+![Screenshot_2026-03-30-16-12-45-649_ch opengis qfield](https://github.com/user-attachments/assets/55af7952-5881-4a4a-a1aa-085cbd1a6720)
+![Screenshot_2026-03-30-16-12-51-260_ch opengis qfield](https://github.com/user-attachments/assets/73a83684-a015-4725-a016-3674f3c78da2)
+![Screenshot_2026-03-30-16-13-21-953_ch opengis qfield](https://github.com/user-attachments/assets/989e87d0-93cc-4526-ba3f-3edd3a59de16)
+![Screenshot_2026-03-30-16-13-33-873_ch opengis qfield](https://github.com/user-attachments/assets/02b58a17-dd4b-47b6-860b-318ccbb630a8)
+![Screenshot_2026-03-30-16-24-12-360_ch opengis qfield](https://github.com/user-attachments/assets/5cc7c685-3798-4559-9646-079e2223ff29)
