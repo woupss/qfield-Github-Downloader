@@ -91,6 +91,7 @@ Item {
     property bool   upIsWorking:          false
     property bool   upIsFinished:         false
     property bool   upIsSelfUpdate:       false
+    property string upInstalledUuid:      ""
     property bool   upUpdatesChecked:     false
     property var    upPluginsQueue:       []
     property string upUpdatesResultText:  ""
@@ -160,6 +161,7 @@ Item {
             LBL_BRANCH:       "Branche :",
             PH_BRANCH:        "main",
             LBL_FOLDER:       "Nom du dossier de votre projet :",
+            LBL_FOLDER_PLUGIN:"Nom du dossier du plugin :",
             PH_FOLDER:        "MonProjet",
             CB_TOKEN:         "Token GitHub (dépôt privé / fichiers LFS volumineux)",
             PH_TOKEN:         "ghp_xxxxxxxxxxxx...",
@@ -207,6 +209,7 @@ Item {
             LBL_BRANCH:       "Branch:",
             PH_BRANCH:        "main",
             LBL_FOLDER:       "Folder name of your project :",
+            LBL_FOLDER_PLUGIN:"Plugin folder name:",
             PH_FOLDER:        "MyProject",
             CB_TOKEN:         "GitHub Token (private repo / LFS large files)",
             PH_TOKEN:         "ghp_xxxxxxxxxxxx...",
@@ -286,7 +289,9 @@ Item {
         "installed":          { "en": "✔ Installed",                   "fr": "✔ Installé" },
         "restart":            { "en": "\nRestart recommended.",        "fr": "\nRedémarrage recommandé." },
         "Refresh the list of plugins to update":       { "en": "🔄  Refresh the list of plugins to update",          "fr": "🔄  Actualiser la liste des plugin à mettre à jour" },
-        "plugin_updated": { "en": "The plugin has been updated.", "fr": "Le plugin a été mis à jour." }
+        "plugin_updated":  { "en": "The plugin has been updated.", "fr": "Le plugin a été mis à jour." },
+        "btn_reload":      { "en": "🔄  Reload plugin",            "fr": "🔄  Recharger le plugin" },
+        "toast_reloading": { "en": "Reloading plugin...",          "fr": "Rechargement du plugin..." } 
     })
 
     function upTr(key) {
@@ -484,6 +489,33 @@ Item {
                 blobs.push({ path: item.path, folder: subfolder, filename: fname, size: item.size || 0 })
             }
         }
+        // Détection du dossier racine du plugin (ex: repo/plugin-name/main.qml → strip le préfixe)
+        // folder = chemin repo original (affiché dans l'arbre)
+        // destFolder = chemin de destination réel (utilisé pour le téléchargement)
+        var pluginRoot = ""
+        if (destMode === "plugin") {
+            for (var pi = 0; pi < blobs.length; pi++) {
+                if (blobs[pi].filename === "main.qml"
+                        && blobs[pi].folder !== ""
+                        && blobs[pi].folder.indexOf("/") === -1) {
+                    pluginRoot = blobs[pi].folder
+                    break
+                }
+            }
+        }
+        for (var pk = 0; pk < blobs.length; pk++) {
+            var orig = blobs[pk].folder
+            if (pluginRoot !== "") {
+                if (orig === pluginRoot)
+                    blobs[pk].destFolder = ""
+                else if (orig.indexOf(pluginRoot + "/") === 0)
+                    blobs[pk].destFolder = orig.substring(pluginRoot.length + 1)
+                else
+                    blobs[pk].destFolder = orig
+            } else {
+                blobs[pk].destFolder = orig
+            }
+        }
         fileTree    = blobs
         repoFolders = folders
         buildTreeModel()
@@ -640,10 +672,10 @@ Item {
         statusText.text  = tr("STATUS_DL") + " " + info
         statusText.color = Theme.mainColor
         infoText.text    = item.path
-        var destPath = buildDestPath(item.folder, item.filename)
+        var destPath = buildDestPath(item.destFolder, item.filename)
         var dlUrl    = buildDownloadUrl(item.path)
         var tkn      = getToken()
-        ensureDir(item.folder)
+        ensureDir(item.destFolder)
         downloadSmartFile(dlUrl, destPath, tkn, function() {
             processedFiles++
             downloadQueue.shift()
@@ -1121,6 +1153,14 @@ Item {
         } else { upStatusText.text = upTr("select_warn"); upStatusText.color = "red"; upIsWorking = false }
     }
 
+    function reloadInstalledPlugin(uuid) {
+        if (!uuid || uuid === "") return
+        if (pluginManager.isAppPluginEnabled(uuid))
+            pluginManager.disableAppPlugin(uuid)
+        pluginManager.enableAppPlugin(uuid)
+        mainWindow.displayToast(upTr("toast_reloading"))
+    }
+
     function executeInstallation(finalUrl) {
         upFinalDownloadUrl = finalUrl
         installTimer.start()
@@ -1169,11 +1209,13 @@ Item {
             if (error && error !== "") { upStatusText.text = upTr("error") + error; upStatusText.color = "red" }
             else {
                 upIsFinished = true
+                upInstalledUuid = uuid !== "" ? uuid : upTargetUuid
                 var successMsg = upTr("plugin_updated")
                 if (upDetectedVersion !== "") successMsg += " " + upDetectedVersion
                 upStatusText.text  = successMsg
                 upStatusText.color = "green"
                 if (pluginManager.pluginModel) pluginManager.pluginModel.refresh(false)
+                reloadInstalledPlugin(upInstalledUuid)
             }
         }
     }
@@ -1452,7 +1494,7 @@ Item {
                     }
                 }
 
-                // ═══════════════════════════════════════════════════════════
+                // ════════════════════════════════════════════════���══════════
                 // SECTION FORMULAIRE INSTALL — Projet  OU  Plugin > Installer
                 // Masquée quand Plugin > Mettre à jour est actif
                 // ═══════════════════════════════════════════════════════════
@@ -1680,7 +1722,7 @@ Item {
                     ColumnLayout {
                         Layout.fillWidth: true
                         spacing: 1
-                        Text { text: tr("LBL_FOLDER"); color: "#666"; font.pixelSize: 11 }
+                        Text { text: destMode === "plugin" ? tr("LBL_FOLDER_PLUGIN") : tr("LBL_FOLDER"); color: "#666"; font.pixelSize: 11 }
                         MarqueeTextField {
                             id: folderInput
                             placeholderText: tr("PH_FOLDER")
@@ -2202,12 +2244,26 @@ downloadDialog.close() }
                     enabled: !upIsWorking && (pluginCombo.currentIndex !== -1 || urlField.text !== "")
                     background: Rectangle { color: parent.enabled ? Theme.mainColor : "#bdc3c7"; radius: 4 }
                     contentItem: Text {
-                        text: upIsWorking ? upTr("btn_wait") : (upPreparedUrl !== "" ? upTr("btn_install") : upTr("btn_update"))
+                        text: upIsWorking ? upTr("btn_wait") : (upInstalledVersion !== "" ? upTr("btn_update") : upTr("btn_install"))
                         color: "white"; font.bold: true; font.pixelSize: 14
                         horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
                     }
                     onClicked: startProcess()
                 }
+                Button {
+                    Layout.alignment: Qt.AlignHCenter
+                    Layout.bottomMargin: 8
+                    leftPadding: 20; rightPadding: 20
+                    visible: upIsFinished && upInstalledUuid !== ""
+                    background: Rectangle { color: "#2980b9"; radius: 4 }
+                    contentItem: Text {
+                        text: upTr("btn_reload")
+                        color: "white"; font.bold: true; font.pixelSize: 14
+                        horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
+                    }
+                    onClicked: reloadInstalledPlugin(upInstalledUuid)
+                }
+
 
                 } // ── fin updateSection ────────────────────────────────────
 
